@@ -135,6 +135,7 @@ public class KubernetesCloud extends Cloud {
     private boolean usageRestricted;
 
     private int maxRequestsPerHost;
+    private boolean dynamicServiceAccountSecurity;
 
     // Integer to differentiate null from 0
     private Integer waitForPodSec = DEFAULT_WAIT_FOR_POD_SEC;
@@ -504,6 +505,15 @@ public class KubernetesCloud extends Cloud {
             podRetention = PodRetention.getKubernetesCloudDefault();
         }
         this.podRetention = podRetention;
+    }
+
+    public boolean isDynamicServiceAccountSecurity() {
+        return dynamicServiceAccountSecurity;
+    }
+
+    @DataBoundSetter
+    public void setDynamicServiceAccountSecurity(boolean dynamicServiceAccountSecurity) {
+        this.dynamicServiceAccountSecurity = dynamicServiceAccountSecurity;
     }
 
     /**
@@ -970,6 +980,7 @@ public class KubernetesCloud extends Cloud {
                 ", podRetention=" + podRetention +
                 ", useJenkinsProxy=" + useJenkinsProxy +
                 ", templates=" + templates +
+                ", dynamicServiceAccountSecurity=" + dynamicServiceAccountSecurity +
                 '}';
     }
 

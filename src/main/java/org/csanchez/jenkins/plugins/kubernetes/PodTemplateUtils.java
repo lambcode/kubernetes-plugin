@@ -244,9 +244,9 @@ public class PodTemplateUtils {
 
         Map<String, String> nodeSelector = mergeMaps(parent.getSpec().getNodeSelector(),
                 template.getSpec().getNodeSelector());
-        String serviceAccount = Strings.isNullOrEmpty(template.getSpec().getServiceAccount())
-                ? parent.getSpec().getServiceAccount()
-                : template.getSpec().getServiceAccount();
+        String serviceAccount = Strings.isNullOrEmpty(template.getSpec().getServiceAccountName())
+                ? parent.getSpec().getServiceAccountName()
+                : template.getSpec().getServiceAccountName();
 
         Boolean hostNetwork = template.getSpec().getHostNetwork() != null
                 ? template.getSpec().getHostNetwork()
@@ -293,7 +293,7 @@ public class PodTemplateUtils {
         SpecNested<PodBuilder> specBuilder = metadataBuilder.endMetadata() //
                 .withNewSpecLike(parent.getSpec()) //
                 .withNodeSelector(nodeSelector) //
-                .withServiceAccount(serviceAccount) //
+                .withServiceAccountName(serviceAccount) //
                 .withHostNetwork(hostNetwork) //
                 .withContainers(combinedContainers) //
                 .withInitContainers(combinedInitContainers) //

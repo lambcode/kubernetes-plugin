@@ -1,0 +1,28 @@
+<p>
+    This step is only meant to be used in a non-sandboxed pipeline library. It has no effect
+    unless 'Dynamic Service Account Security' is enabled. When it is enabled,
+    this step enables only select service accounts to be used with the 'podTemplate'
+    step. The kubernetes default service account is always allowed.
+<p>
+<p>
+    This can be useful in conjunction with the 'input' step to only allow certain service
+    accounts to be used after approval has been given for each successive environment
+    deployed to in a CI/CD workflow.
+</p>
+<p>
+    Example usage:
+</p>
+<pre>
+	// Defined in pipeline library
+    import org.csanchez.jenkins.plugins.kubernetes.pipeline.ServiceAccountSelectorFromLabels
+    input(message: ‘Approve Prod Deploy?’, ok: ‘Yes’, submitter: 'bob')
+    withAllowedServiceAccounts(new ServiceAccountSelectorFromLabels([environment: 'prod']))
+
+      // Defined in Jenkinsfile. Will only succeed if template uses allowed service account
+      podTemplate(...) {
+        ...
+	  }
+
+    }
+}
+</pre>

@@ -3,16 +3,17 @@ package org.csanchez.jenkins.plugins.kubernetes.pipeline;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Collection;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.TaskListener;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud;
 import org.csanchez.jenkins.plugins.kubernetes.KubernetesFolderProperty;
 import org.csanchez.jenkins.plugins.kubernetes.Messages;
@@ -30,7 +31,6 @@ import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.slaves.Cloud;
-import java.util.Collections;
 import jenkins.model.Jenkins;
 import org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate;
 import org.csanchez.jenkins.plugins.kubernetes.PodAnnotation;
@@ -144,6 +144,15 @@ public class PodTemplateStepExecution extends AbstractStepExecutionImpl {
             throw new AbortException(Messages.RFC1123_error(String.join(", ", errors)));
         }
 
+        String finalServiceAccount = getFinalServiceAccount(newTemplate);
+        String finalNamespace = getFinalNamespace(newTemplate, cloud);
+        if (cloud.isDynamicServiceAccountSecurity()
+                && finalServiceAccount != null
+                && !finalServiceAccount.equals("default")
+                && !isServiceAccountAllowed(cloud, finalServiceAccount, finalNamespace)) {
+            throw new AbortException(String.format("Dynamic Service Account Security enabled and Service account %s in namespace %s not allowed", finalServiceAccount, finalNamespace));
+        }
+
         cloud.addDynamicTemplate(newTemplate);
         BodyInvoker invoker = getContext().newBodyInvoker().withContexts(step, new PodTemplateContext(namespace, name)).withCallback(new PodTemplateCallback(newTemplate));
         if (step.getLabel() == null) {
@@ -151,6 +160,65 @@ public class PodTemplateStepExecution extends AbstractStepExecutionImpl {
         }
         invoker.start();
 
+        return false;
+    }
+
+    /**
+     * Returns the service account name that will be on the final pod definition. The value is the first one of:
+     * <ol>
+     *     <li>Template serviceAccount</li>
+     *     <li>Yaml service account name</li>
+     *     <li>Yaml service account (due to backwards compatibility in kubernetes. See https://github.com/kubernetes/kubernetes/pull/11389)</li>
+     *     <li>{@code null}</li>
+     * </ol>
+     */
+    private String getFinalServiceAccount(PodTemplate template) {
+        if (template.getServiceAccount() != null) {
+            return template.getServiceAccount();
+        }
+        Pod yamlsPod= template.getYamlsPod();
+        if (yamlsPod == null) {
+            return null;
+        } else if (yamlsPod.getSpec().getServiceAccountName() != null) {
+            return yamlsPod.getSpec().getServiceAccountName();
+        } else if (yamlsPod.getSpec().getServiceAccount() != null) {
+            return yamlsPod.getSpec().getServiceAccount();
+        }
+        return null;
+    }
+
+    /**
+     * Returns the namespace that will be on the final pod definition. The value is the first one of:
+     * <ol>
+     *     <li>Yaml namespace</li>
+     *     <li>Template namespace</li>
+     *     <li>Cloud namespace</li>
+     * </ol>
+     */
+    private String getFinalNamespace(PodTemplate template, KubernetesCloud cloud) {
+        Pod yamlsPod= template.getYamlsPod();
+        if (yamlsPod != null && StringUtils.isNotBlank(yamlsPod.getMetadata().getNamespace())) {
+            return yamlsPod.getMetadata().getNamespace();
+        } else if (template.getNamespace() != null && StringUtils.isNotBlank(template.getNamespace())) {
+            return template.getNamespace();
+        } else {
+            return cloud.getNamespace();
+        }
+    }
+
+    private boolean isServiceAccountAllowed(KubernetesCloud cloud, String serviceAccountName, String namespace) throws Exception {
+        ServiceAccountSelector serviceAccountSelector = getContext().get(ServiceAccountSelector.class);
+        if (serviceAccountSelector == null) {
+            return false;
+        }
+
+        KubernetesClient client = cloud.connect();
+        List<ServiceAccountSelector.NameAndNamespace> serviceAccounts = serviceAccountSelector.getServiceAccounts(client);
+        for (ServiceAccountSelector.NameAndNamespace serviceAccount : serviceAccounts) {
+            if (serviceAccount.getName().equals(serviceAccountName) && serviceAccount.getNamespace().equals(namespace)) {
+                return true;
+            }
+        }
         return false;
     }
 
