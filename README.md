@@ -609,6 +609,73 @@ containerLog 'mongodb'
 
 Also see the online help and [examples/containerLog.groovy](examples/containerLog.groovy).
 
+# Dynamic Service Account Security
+
+A common pattern in pipelines is to deploy to multiple environments successively. For example
+you might deploy to a staging environment and require testing and approval from management before
+the pipeline is allowed to deploy to production. One might have different service accounts for each
+environment that has least privilege to only deploy to that environment. However, by default,
+new pod templates created in a pipeline with the 'podTemplate' step can assign any service account
+in accessible namespaces essentially giving users the power to modify any environment.
+
+The dynamic service account security feature, when enabled, only allows new pod templates to be created
+if the service account is contained within a set of approved service accounts provided by the 
+'withAllowedServiceAccounts' step. This step is only available to be called from a non-sanboxed
+pipeline library allowing only administrators to change when specific  service accounts are allowed.
+Attempting to use it in a sandbox context will result in a build failure.
+
+By default, 'Dynamic Service Account Security' is turned off, allowing any service account to be specified
+in a 'podTemplate' step. The 'withAllowedServiceAccounts' step will only have an effect if this feature
+is turned on through the Kubernetes Cloud settings.
+
+An example pipeline library using this feature could look like this.
+```
+// vars/deploy.groovy
+import org.csanchez.jenkins.plugins.kubernetes.pipeline.ServiceAccountSelectorFromLabels
+    
+def call(devDeployClosure, prodDeployClosure) {
+    withAllowedServiceAccounts(new ServiceAccountSelectorFromLabels([environment: 'prod'])) {
+        devDeployClosure();
+    }
+        
+    input(message: ‘Approve Prod Deploy?’, ok: ‘Yes’, submitter: 'bob')
+    withAllowedServiceAccounts(new ServiceAccountSelectorFromLabels([environment: 'prod'])) {
+        prodDeployClosure();
+    }
+}
+```
+
+A Jenkinsfile that uses this pipeline library:
+```
+// Jenkinsfile
+@Library('deploy') _
+
+deploy({
+  podTemplate(serviceAccount: 'deploy-dev') {
+    node(POD_LABEL) {
+      ...
+    }
+  }
+},
+{
+  podTemplate(serviceAccount: 'deploy-prod') {
+    node(POD_LABEL) {
+      ...
+    }
+  }
+})
+```
+
+With the above pipeline, only those service accounts with the label `'environment': 'dev'`
+would be allowed in the first 'podTemplate' step and only the service accounts with label
+`'environment': 'prod'` would be allowed in the second 'podTemplate' step. Because the
+pipeline library also includes an input step requiring a specific user/group, usage of pods 
+with the sensitive production service accounts are prevented util approved.
+
+## withAllowedServiceAccounts step
+
+The 'withServiceAccounts' step
+
 # Running on OpenShift
 
 ## Random UID problem

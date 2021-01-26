@@ -13,16 +13,14 @@
     Example usage:
 </p>
 <pre>
-	// Defined in pipeline library
-    import org.csanchez.jenkins.plugins.kubernetes.pipeline.ServiceAccountSelectorFromLabels
-    input(message: ‘Approve Prod Deploy?’, ok: ‘Yes’, submitter: 'bob')
-    withAllowedServiceAccounts(new ServiceAccountSelectorFromLabels([environment: 'prod']))
+// Defined in pipeline library
+import org.csanchez.jenkins.plugins.kubernetes.pipeline.ServiceAccountSelectorFromLabels
+input(message: ‘Approve Prod Deploy?’, ok: ‘Yes’, submitter: 'bob')
+withAllowedServiceAccounts(new ServiceAccountSelectorFromLabels([environment: 'prod'])) {
 
-      // Defined in Jenkinsfile. Will only succeed if template uses allowed service account
-      podTemplate(...) {
-        ...
-	  }
-
-    }
+  // Defined in Jenkinsfile. Will only succeed if template uses allowed service account
+  podTemplate(...) {
+    ...
+  }
 }
 </pre>
