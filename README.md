@@ -670,11 +670,19 @@ With the above pipeline, only those service accounts with the label `'environmen
 would be allowed in the first 'podTemplate' step and only the service accounts with label
 `'environment': 'prod'` would be allowed in the second 'podTemplate' step. Because the
 pipeline library also includes an input step requiring a specific user/group, usage of pods 
-with the sensitive production service accounts are prevented util approved.
+with the sensitive production service accounts are prevented until approved.
 
-## withAllowedServiceAccounts step
+## Protected Node Templates
 
-The 'withServiceAccounts' step
+When the Dynamic Service Account Security is enabled, pod templates created by a pipeline
+are protected. This means that they cannot be used by other pipelines. Note that this only 
+applies to executions on the pod ('sh' step, 'containerLog' step, etc). While a pod template 
+is in scope in one job, other jobs can cause an instance of the template to be created, but any
+further attempts to access the node through will fail. 
+
+It is recommended to use the automatically generated 'POD_LABEL' to avoid accidental instantiation
+of a pod template. It is also recommended to not have containers do anything requiring the use of 
+a service account unless invoked by an execution step governed by the protected template.
 
 # Running on OpenShift
 

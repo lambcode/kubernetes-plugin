@@ -82,9 +82,11 @@ public class ContainerStepExecution extends StepExecution {
         decorator.setGlobalVars(globalVars);
         decorator.setRunContextEnvVars(rcEnvVars);
         decorator.setShell(shell);
+
         getContext().newBodyInvoker()
                 .withContexts(
-                        BodyInvoker.mergeLauncherDecorators(getContext().get(LauncherDecorator.class), decorator),
+                        BodyInvoker.mergeLauncherDecorators(getContext().get(LauncherDecorator.class),
+                                BodyInvoker.mergeLauncherDecorators(decorator, new ProtectedExecDecorator(ProtectedPodContext.fromContext(getContext())))),
                         env
                 )
                 .withCallback(new ContainerExecCallback(decorator))

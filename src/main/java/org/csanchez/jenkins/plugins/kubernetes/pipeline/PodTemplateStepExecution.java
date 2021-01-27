@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.LauncherDecorator;
 import hudson.model.TaskListener;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -146,15 +147,22 @@ public class PodTemplateStepExecution extends AbstractStepExecutionImpl {
 
         String finalServiceAccount = getFinalServiceAccount(newTemplate);
         String finalNamespace = getFinalNamespace(newTemplate, cloud);
-        if (cloud.isDynamicServiceAccountSecurity()
-                && finalServiceAccount != null
-                && !finalServiceAccount.equals("default")
-                && !isServiceAccountAllowed(cloud, finalServiceAccount, finalNamespace)) {
-            throw new AbortException(String.format("Dynamic Service Account Security enabled and Service account %s in namespace %s not allowed", finalServiceAccount, finalNamespace));
+        if (cloud.isDynamicServiceAccountSecurity()) {
+            newTemplate.setProtected(true);
+
+            if (finalServiceAccount != null && !finalServiceAccount.equals("default") && !isServiceAccountAllowed(cloud, finalServiceAccount, finalNamespace)) {
+                throw new AbortException(String.format("Dynamic Service Account Security enabled and Service account %s in namespace %s not allowed", finalServiceAccount, finalNamespace));
+            }
         }
 
         cloud.addDynamicTemplate(newTemplate);
-        BodyInvoker invoker = getContext().newBodyInvoker().withContexts(step, new PodTemplateContext(namespace, name)).withCallback(new PodTemplateCallback(newTemplate));
+        ProtectedPodContext newProtectedPodContext = ProtectedPodContext.fromContext(getContext()).append(newTemplate.getId());
+        BodyInvoker invoker = getContext().newBodyInvoker().withContexts(step,
+                new PodTemplateContext(namespace, name),
+                newProtectedPodContext,
+                BodyInvoker.mergeLauncherDecorators(getContext().get(LauncherDecorator.class), new ProtectedExecDecorator(newProtectedPodContext)));
+        invoker = invoker.withCallback(new PodTemplateCallback(newTemplate));
+
         if (step.getLabel() == null) {
             invoker.withContext(EnvironmentExpander.merge(getContext().get(EnvironmentExpander.class), EnvironmentExpander.constant(Collections.singletonMap("POD_LABEL", label))));
         }

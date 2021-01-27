@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.Serializable;
 
 import org.csanchez.jenkins.plugins.kubernetes.KubernetesSlave;
+import org.csanchez.jenkins.plugins.kubernetes.PodTemplate;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import hudson.AbortException;
@@ -57,6 +58,10 @@ class KubernetesNodeContext implements Serializable {
 
     KubernetesClient connectToCloud() throws Exception {
         return getKubernetesSlave().getKubernetesCloud().connect();
+    }
+
+    PodTemplate getPodTemplate() throws Exception {
+        return getKubernetesSlave().getTemplate();
     }
 
     private KubernetesSlave getKubernetesSlave() throws IOException, InterruptedException {

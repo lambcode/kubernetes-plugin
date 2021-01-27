@@ -151,6 +151,8 @@ public class PodTemplate extends AbstractDescribableImpl<PodTemplate> implements
 
     private Long terminationGracePeriodSeconds;
 
+    private Boolean isProtected;
+
     /**
      * Persisted yaml fragment
      */
@@ -934,6 +936,18 @@ public class PodTemplate extends AbstractDescribableImpl<PodTemplate> implements
     @Override
     public void save()  { }
 
+    public boolean isProtected() {
+        return isProtectedSet() ? isProtected : false;
+    }
+
+    public void setProtected(boolean isProtected) {
+        this.isProtected = isProtected;
+    }
+
+    boolean isProtectedSet() {
+        return isProtected != null;
+    }
+
     @Extension
     public static class DescriptorImpl extends Descriptor<PodTemplate> {
 
@@ -1019,6 +1033,7 @@ public class PodTemplate extends AbstractDescribableImpl<PodTemplate> implements
                 (imagePullSecrets == null || imagePullSecrets.isEmpty() ? "" : ", imagePullSecrets=" + imagePullSecrets) +
                 (nodeProperties == null || nodeProperties.isEmpty() ? "" : ", nodeProperties=" + nodeProperties) +
                 (yamls == null || yamls.isEmpty() ? "" : ", yamls=" + yamls) +
+                (!isProtected ? "" : ", protected=" + isProtected) +
                 '}';
     }
 }

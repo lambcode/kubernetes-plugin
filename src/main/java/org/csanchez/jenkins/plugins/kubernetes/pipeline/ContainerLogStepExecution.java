@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.dsl.PrettyLoggable;
 import io.fabric8.kubernetes.client.dsl.TailPrettyLoggable;
 import io.fabric8.kubernetes.client.dsl.TimeTailPrettyLoggable;
+import org.csanchez.jenkins.plugins.kubernetes.PodTemplate;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 
@@ -73,6 +74,14 @@ public class ContainerLogStepExecution extends SynchronousNonBlockingStepExecuti
 
             KubernetesNodeContext nodeContext = new KubernetesNodeContext(getContext());
             client = nodeContext.connectToCloud();
+
+            PodTemplate template = nodeContext.getPodTemplate();
+            if (template.isProtected()) {
+                ProtectedPodContext protectedPodContext = ProtectedPodContext.fromContext(getContext());
+                if (!protectedPodContext.contains(template.getId())) {
+                    throw new IllegalStateException("No executions allowed in a pod created from a protected template when template is not in pipeline context.");
+                }
+            }
 
             String podName = nodeContext.getPodName();
             PodResource<Pod, DoneablePod> pod = client.pods() //

@@ -447,6 +447,7 @@ public class PodTemplateUtils {
         List<String> yamls = new ArrayList<>(parent.getYamls());
         yamls.addAll(template.getYamls());
         podTemplate.setYamls(yamls);
+        podTemplate.setProtected(template.isProtectedSet() ? template.isProtected() : parent.isProtected());
 
         LOGGER.log(Level.FINEST, "Pod templates combined: {0}", podTemplate);
         return podTemplate;
