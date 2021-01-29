@@ -1,8 +1,12 @@
 package org.csanchez.jenkins.plugins.kubernetes;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Queue;
+import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.slaves.AbstractCloudComputer;
@@ -24,6 +28,8 @@ import org.kohsuke.stapler.framework.io.ByteBuffer;
 import org.kohsuke.stapler.framework.io.LargeText;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -175,5 +181,10 @@ public class KubernetesComputer extends AbstractCloudComputer<KubernetesSlave> {
         if (acceptingTasks) {
             launching = false;
         }
+    }
+
+    @Override
+    public Channel getChannel() {
+        return super.getChannel();
     }
 }

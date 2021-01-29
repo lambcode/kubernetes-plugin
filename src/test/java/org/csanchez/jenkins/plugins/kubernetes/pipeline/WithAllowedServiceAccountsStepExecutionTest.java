@@ -178,8 +178,20 @@ public class WithAllowedServiceAccountsStepExecutionTest {
         r.assertBuildStatusSuccess(r.waitForCompletion(run1));
 
         assertNotNull(run2);
-        r.assertBuildStatusSuccess(r.waitForCompletion(run2));
-        r.assertLogContains("Failed to get logs for container", run2);
+        r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(run2));
+        r.assertLogContains("No executions allowed in a pod created from a protected template when template is not in pipeline context.", run2);
+    }
+
+    @Test
+    public void testNestedPodProtectionContainerLogStep() throws Exception {
+        cloud.setDynamicServiceAccountSecurity(true);
+
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "nested_pod_protection_container_log");
+        job.setDefinition(new CpsFlowDefinition(loadPipelineScript("nestedPodProtectionContainerLog.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run = job.scheduleBuild2(0).waitForStart();
+
+        assertNotNull(run);
+        r.assertBuildStatusSuccess(r.waitForCompletion(run));
     }
 
     @Test
@@ -192,6 +204,94 @@ public class WithAllowedServiceAccountsStepExecutionTest {
 
         WorkflowJob job2 = r.jenkins.createProject(WorkflowJob.class, "hijack_node_sh_step_in_container");
         job2.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNodeShStepInContainer.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run2 = job2.scheduleBuild2(0).waitForStart();
+
+        groovyCommunicationLatches.get(name.getMethodName().toLowerCase()).countDown();
+
+        assertNotNull(run1);
+        r.assertBuildStatusSuccess(r.waitForCompletion(run1));
+
+        assertNotNull(run2);
+        r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(run2));
+        r.assertLogContains("No executions allowed in a pod created from a protected template when template is not in pipeline context.", run2);
+    }
+
+    @Test
+    public void testNodeReadFileStepCannotBeHijackedByAnotherJob() throws Exception {
+        cloud.setDynamicServiceAccountSecurity(true);
+        WorkflowJob job1 = r.jenkins.createProject(WorkflowJob.class, "hijack_node");
+        job1.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNode.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run1 = job1.scheduleBuild2(0).waitForStart();
+        assertNotNull(run1);
+
+        WorkflowJob job2 = r.jenkins.createProject(WorkflowJob.class, "hijack_node_read_file_step");
+        job2.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNodeReadFileStep.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run2 = job2.scheduleBuild2(0).waitForStart();
+
+        groovyCommunicationLatches.get(name.getMethodName().toLowerCase()).countDown();
+
+        assertNotNull(run1);
+        r.assertBuildStatusSuccess(r.waitForCompletion(run1));
+
+        assertNotNull(run2);
+        r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(run2));
+        r.assertLogContains("No executions allowed in a pod created from a protected template when template is not in pipeline context.", run2);
+    }
+
+    @Test
+    public void testNodeReadFileStepInContainerCannotBeHijackedByAnotherJob() throws Exception {
+        cloud.setDynamicServiceAccountSecurity(true);
+        WorkflowJob job1 = r.jenkins.createProject(WorkflowJob.class, "hijack_node");
+        job1.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNode.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run1 = job1.scheduleBuild2(0).waitForStart();
+        assertNotNull(run1);
+
+        WorkflowJob job2 = r.jenkins.createProject(WorkflowJob.class, "hijack_node_read_file_step_in_container");
+        job2.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNodeReadFileStepInContainer.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run2 = job2.scheduleBuild2(0).waitForStart();
+
+        groovyCommunicationLatches.get(name.getMethodName().toLowerCase()).countDown();
+
+        assertNotNull(run1);
+        r.assertBuildStatusSuccess(r.waitForCompletion(run1));
+
+        assertNotNull(run2);
+        r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(run2));
+        r.assertLogContains("No executions allowed in a pod created from a protected template when template is not in pipeline context.", run2);
+    }
+
+    @Test
+    public void testNodeWriteFileStepCannotBeHijackedByAnotherJob() throws Exception {
+        cloud.setDynamicServiceAccountSecurity(true);
+        WorkflowJob job1 = r.jenkins.createProject(WorkflowJob.class, "hijack_node");
+        job1.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNode.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run1 = job1.scheduleBuild2(0).waitForStart();
+        assertNotNull(run1);
+
+        WorkflowJob job2 = r.jenkins.createProject(WorkflowJob.class, "hijack_node_write_file_step");
+        job2.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNodeWriteFileStep.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run2 = job2.scheduleBuild2(0).waitForStart();
+
+        groovyCommunicationLatches.get(name.getMethodName().toLowerCase()).countDown();
+
+        assertNotNull(run1);
+        r.assertBuildStatusSuccess(r.waitForCompletion(run1));
+
+        assertNotNull(run2);
+        r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(run2));
+        r.assertLogContains("No executions allowed in a pod created from a protected template when template is not in pipeline context.", run2);
+    }
+
+    @Test
+    public void testNodeWriteFileStepInContainerCannotBeHijackedByAnotherJob() throws Exception {
+        cloud.setDynamicServiceAccountSecurity(true);
+        WorkflowJob job1 = r.jenkins.createProject(WorkflowJob.class, "hijack_node");
+        job1.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNode.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run1 = job1.scheduleBuild2(0).waitForStart();
+        assertNotNull(run1);
+
+        WorkflowJob job2 = r.jenkins.createProject(WorkflowJob.class, "hijack_node_write_file_step_in_container");
+        job2.setDefinition(new CpsFlowDefinition(loadPipelineScript("hijackNodeWriteFileStepInContainer.groovy"), false)); // non-sandboxed to simulate pipeline library
         WorkflowRun run2 = job2.scheduleBuild2(0).waitForStart();
 
         groovyCommunicationLatches.get(name.getMethodName().toLowerCase()).countDown();
@@ -230,6 +330,16 @@ public class WithAllowedServiceAccountsStepExecutionTest {
         cloud.setDynamicServiceAccountSecurity(true);
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "nexted_pod_protection");
         job.setDefinition(new CpsFlowDefinition(loadPipelineScript("nestedPodProtection.groovy"), false)); // non-sandboxed to simulate pipeline library
+        WorkflowRun run = job.scheduleBuild2(0).waitForStart();
+        assertNotNull(run);
+        r.assertBuildStatusSuccess(r.waitForCompletion(run));
+    }
+
+    @Test
+    public void testPodProtectionAllowsReadAndWriteFileInSameJob() throws Exception {
+        cloud.setDynamicServiceAccountSecurity(true);
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "nexted_pod_protection_read_write");
+        job.setDefinition(new CpsFlowDefinition(loadPipelineScript("nestedPodProtectionReadWrite.groovy"), false)); // non-sandboxed to simulate pipeline library
         WorkflowRun run = job.scheduleBuild2(0).waitForStart();
         assertNotNull(run);
         r.assertBuildStatusSuccess(r.waitForCompletion(run));

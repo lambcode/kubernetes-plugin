@@ -5,6 +5,7 @@ import hudson.Launcher;
 import hudson.LauncherDecorator;
 import hudson.Proc;
 import hudson.model.Node;
+import org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud;
 import org.csanchez.jenkins.plugins.kubernetes.KubernetesSlave;
 import org.csanchez.jenkins.plugins.kubernetes.PodTemplate;
 
@@ -13,11 +14,14 @@ import java.io.Serializable;
 import java.util.Collections;
 
 /**
+ * When {@link KubernetesCloud#isDynamicServiceAccountSecurity()} is enabled, ensures files cannot be read from
+ * protected pods unless their id is in the {@link ProtectedPodContext}
+ * <p>
  * This LauncherDecorator is installed globally, in steps that change the execution context.
- *
+ * <p>
  * It needs to be installed globally because steps like the 'sh' step can be run on a kubernetes node without
  * calling any other step from this plugin. Having it installed prevents those executions on protected pod templates.
- *
+ * <p>
  * Due to more permissive launchers being layered on top of less permissive ones, we only want to have the outer most
  * launcher actually check the permissions. A env variable is added once the check has been done on the outer most
  * launcher and subsequent launchers in the chain will be a pass-through.
@@ -39,7 +43,7 @@ public class ProtectedExecDecorator extends LauncherDecorator implements Seriali
     @Override
     public Launcher decorate(Launcher launcher, Node node) {
         if (node instanceof KubernetesSlave) {
-            return new ProtectedLauncher(launcher, (KubernetesSlave)node);
+            return new ProtectedLauncher(launcher, (KubernetesSlave) node);
         }
         return launcher;
     }
@@ -68,7 +72,7 @@ public class ProtectedExecDecorator extends LauncherDecorator implements Seriali
             }
 
             if (template.isProtected() && !protectedPodContext.contains(template.getId())) {
-                throw new IllegalStateException("No executions allowed in a pod created from a protected template when template is not in pipeline context.");
+                throw new SecurityException("No executions allowed in a pod created from a protected template when template is not in pipeline context.");
             }
 
             String[] newEnvs = new String[currentEnvs.length + 1];

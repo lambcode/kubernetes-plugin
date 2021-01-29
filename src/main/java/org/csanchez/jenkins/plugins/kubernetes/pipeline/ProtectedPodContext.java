@@ -1,6 +1,6 @@
 package org.csanchez.jenkins.plugins.kubernetes.pipeline;
 
-import org.csanchez.jenkins.plugins.kubernetes.PodTemplate;
+import org.jenkinsci.plugins.workflow.steps.DynamicContext;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import javax.annotation.Nonnull;
@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A context object containing a list of all pod template ids that are in scope at a particular point in the pipeline
+ * script.
+ */
 class ProtectedPodContext implements Serializable {
 
     private List<String> allowedTemplateIds;
@@ -30,6 +34,11 @@ class ProtectedPodContext implements Serializable {
     }
 
     public static ProtectedPodContext fromContext(StepContext context) throws IOException, InterruptedException {
+        ProtectedPodContext existing = context.get(ProtectedPodContext.class);
+        return existing != null ? existing : new ProtectedPodContext(Collections.emptyList());
+    }
+
+    public static ProtectedPodContext fromContext(DynamicContext.DelegatedContext context) throws IOException, InterruptedException {
         ProtectedPodContext existing = context.get(ProtectedPodContext.class);
         return existing != null ? existing : new ProtectedPodContext(Collections.emptyList());
     }
